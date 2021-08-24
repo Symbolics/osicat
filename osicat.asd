@@ -30,9 +30,6 @@
 (eval-when (:load-toplevel :execute)
   (asdf:load-system 'trivial-features))
 
-;;; We could split these modules into separate systems if anyone feels
-;;; that might be useful.  --luis
-
 (defsystem :osicat
   :author "Nikodemus Siivola <nikodemus@random-state.net>"
   :description "A lightweight operating system interface"
@@ -43,44 +40,53 @@
   ((:module #:osicat-sys
     :pathname "src/"
     :components
-    ((:file "osicat-sys")))
-   (:module #:posix
-    :depends-on (#:osicat-sys)
-    :serial t
-    :components
-    ((:file "packages")
-     (:cffi-grovel-file "basic-unixint")
-     (:cffi-grovel-file "unixint" :if-feature (:not :windows))
-     (:file "early")
-     (:cffi-wrapper-file "wrappers" :soname "libosicat")
-     (:file "basic-unix")
-     (:file "unix" :if-feature (:not :windows))
-     (:file "linux" :if-feature :linux)
-     (:file "windows" :if-feature :windows)
-     (:file "misc")))
-   (:module #:windows
-    :if-feature :windows
-    :depends-on (#:osicat-sys)
-    :components
-    ((:file "package")
-     (:file "windows" :depends-on ("package"))))
-   (:module #:mach
-    :if-feature :darwin
-    :depends-on (#:osicat-sys)
-    :components
-    ((:file "package")
-     (:file "mach" :depends-on ("package"))))
-   (:module #:src
-    :depends-on (#:osicat-sys
-                 #:posix
-                 (:feature :windows #:windows)
-                 (:feature :darwin #:mach))
-    :components
+    ((:file "osicat-sys"))))
+  :in-order-to ((test-op (test-op :osicat/tests))))
+
+(defsystem "osicat/posix"
+  :depends-on (:osicat)
+  :pathname "posix/"
+  :serial t
+  :components
+  ((:file "packages")
+   (:cffi-grovel-file "basic-unixint")
+   (:cffi-grovel-file "unixint" :if-feature (:not :windows))
+   (:file "early")
+   (:cffi-wrapper-file "wrappers" :soname "libosicat")
+   (:file "basic-unix")
+   (:file "unix" :if-feature (:not :windows))
+   (:file "linux" :if-feature :linux)
+   (:file "windows" :if-feature :windows)
+   (:file "misc")))
+
+(defsystem "osicat/windows"
+  :if-feature :windows
+  :depends-on (#:osicat)
+  :pathname "windows/"
+  :components
+  ((:file "package")
+   (:file "windows" :depends-on ("package"))))
+
+ (defsystem "osicat/mach"
+  :if-feature :darwin
+  :depends-on (#:osicat)
+  :pathname "mach/"
+  :components
+          ((:file "package")
+           (:file "mach" :depends-on ("package"))))
+
+(defsystem "osicat/src"
+  :depends-on (#:osicat
+               #:osicat/posix
+               (:feature :windows #:windows)
+               (:feature :darwin #:mach))
+  :pathname "src/"
+  :serial t
+  :components
     ((:file "packages")
      (:file "fd-streams" :depends-on ("packages"))
      (:file "osicat" :depends-on ("packages" "fd-streams"))
-     (:file "time" :depends-on ("packages")))))
-  :in-order-to ((test-op (test-op :osicat/tests))))
+     (:file "time" :depends-on ("packages"))))
 
 (defsystem #:osicat/tests
   :author "Nikodemus Siivola <nikodemus@random-state.net>"
